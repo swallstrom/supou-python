@@ -11,11 +11,11 @@ import numpy as np
 ###  Outputs: Rhat: npar element array containing Rhat values.
 
 
-def rhat(theta):
-	shape = ntheta.shape()
-	niter = shape[0]
-	nchains = shape[1]
-	npar = shape[2]
+def rhat_function(theta):
+	ntheta = theta.shape()
+	niter = ntheta[0]
+	nchains = ntheta[1]
+	npar = ntheta[2]
 
 	Bvar = np.array()
 	Wvar = np.array()
@@ -28,10 +28,11 @@ def rhat(theta):
 
 		for i in range(0,nchains):
 			sjsqr = sjsqr + np.sum(theta[:,i,j] - thetabarj[i]**2) / (niter - 1)
-			np.insert(Bvar,j,niter / (nchains - 1.0) * np.sum( (thetabarj - thetabar)^2 ))
-			np.insert(Wvar,j,niter / (nchains - 1.0) * np.sum( (thetabarj - thetabar)^2 ))
 
-	varplus = (1.0 - 1d / niter) * Wvar + Bvar / niter
-	Rhat = sqrt(varplus/Wvar)
+        np.insert(Bvar,j,niter / (nchains - 1.0) * np.sum( (thetabarj - thetabar)^2 ))
+        np.insert(Wvar,j,sjsqr / nchains)
 
-	return, Rhat
+	varplus = (1 - 1.0 / niter) * Wvar + Bvar / niter
+	rhat = np.sqrt(varplus/Wvar)
+
+	return, rhat
