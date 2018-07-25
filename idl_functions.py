@@ -1,6 +1,8 @@
 import numpy as np
 
 #percentile
+### This can be done with np.percentile(data,alpha)
+### Also, not used in the supou code...
 def percentile(data,alpha,index=index):
 
 	sorted = np.sort(data)
@@ -12,8 +14,8 @@ def percentile(data,alpha,index=index):
 
 	return, data[index]
 
-
 #permute
+### Not used in the supou code....
 def permute(n,seed):
 
 	unif = np.randomu(seed,n)
@@ -31,7 +33,7 @@ def logit(x,inverse=False):
 			print('All elements of x must be between 0 and 1')
 			return, 0
 
-		logit = np.log(x / (1 - x)) #Is this natural log?
+		logit = np.log(x / (1 - x)) #Is this natural log? Yes.
 
 		return, logit
 
@@ -41,6 +43,7 @@ def logit(x,inverse=False):
 		return, inv_logit
 
 #gettok
+### Not used in the supou code...
 def gettok(st,char,exact=True,notrim=True):
 
 
@@ -73,6 +76,7 @@ def gettok(st,char,exact=True,notrim=True):
 	return, token
 
 #ntostr
+### This function is just used to convert a float to string so it can be printed out... use str(num) instead
 def ntostr(num,pos2,pos1,format=format,round=False):
 	
 	strnum = []
