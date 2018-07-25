@@ -90,18 +90,49 @@ def ntostr(num,pos2,pos1,format=format,round=False):
 		if len(pos2) == 0: pos2 = len(str(num[i]))
 
 #default return whole string unless otherwise specified
-		if round == True:
+		if round:
 			nleft = long(alog10(abs(num[i])))+1 > 1
 			nleft = nleft + (num[i] < 0)
 			nav = pos2 - nleft - 1
 
 			if nav >= 0:
-				tnum = 
+				tnum = rnd(num[i],nav)
+			else:
+				nav = nav+1
+				tnum = rnd(num,nav)
+				
+			strnum[i] = str(tnum)
 
-			strnum[i] = 
 
-
-		if round == False:
+		else:
 			strnum[i] = strnum[i][pos1:pos2+1]
 
 	return,strnum
+
+#function to return value rounded at required precision
+def rnd(value,round,direction):
+	fnctn = value*0.0
+	nonzero = value[value != 0.]
+
+	if nonzero > 0 :
+
+		if (n_params() lt 2) then round = 1.0
+		round = abs(round)
+		val=value[nonzero]+round*0.5
+
+		if direction == 'up':
+			val = value(nonzero)+round*0.999999 
+		elif direction == 'down':
+			val = float(long((value[nonzero]+round)/float(round))*round)-round*0.999999
+		elif direction == 'out':
+			val = value[nonzero]+float(value[nonzero])/abs(value[nonzero])*round*0.999999
+		elif direction == 'in':
+			val = value[nonzero]-float(value[nonzero])/abs(value[nonzero])*round*0.000001
+
+		fnctn[nonzero] = float(long(val/float(round))*round)
+
+	sz = value.shape()[0]
+	if sz[0] == 0:
+		fnctn = fnctn[0] #data originally a scalar
+
+	return, fnctn
