@@ -20,14 +20,14 @@ def rhat_function(theta):
 	Bvar = np.array()
 	Wvar = np.array()
 
-	for j in range(0, npar):
-		thetabarj = np.sum(theta[:,:,j],1) / niter
+	for j in range(npar):
+		thetabarj = np.sum(theta[:,:,j],0) / niter
 		thetabar  = np.mean(thetabarj)
 
 		sjsqr = 0.
 
-		for i in range(0,nchains):
-			sjsqr = sjsqr + np.sum(theta[:,i,j] - thetabarj[i]**2) / (niter - 1)
+		for i in range(nchains):
+			sjsqr = sjsqr + np.sum(theta[:,i,j] - thetabarj[0][i]**2) / (niter - 1)
 
         np.insert(Bvar,j,niter / (nchains - 1.0) * np.sum( (thetabarj - thetabar)^2 ))
         np.insert(Wvar,j,sjsqr / nchains)
