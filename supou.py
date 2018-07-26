@@ -8,11 +8,9 @@ Doublecheck the matrix multiplication!
 def logit(x,inverse=False):
     
     if inverse == False:
-        #xvals = x[(x < 0) or (x > 1)]
-        
-        #if True in xvals:
-        #    print('All elements of x must be between 0 and 1')
-        #    return 0
+        if np.any(x < 0.) or np.any(x > 1.):
+            print('All elements of x must be between 0 and 1')
+            return 0
     
         logit = np.log(x / (1 - x))
     
@@ -43,18 +41,18 @@ def kalman_params_supou( y, time, yvar, thetai, nou, counts): #, yhat, yhvar
     
     sigsqr = 2. * ysigma**2 / np.sum(weights**2 / omgrid)
     
-    yhat = np.empty(ny)
-    yhvar = np.empty(ny) 
+    yhat = np.zeros(ny)
+    yhvar = np.zeros(ny)
     yhat[0] = mu
     if counts:
         yhvar[0] = ysigma**2 + 1. / np.exp(yhat[0])
     else:
         yhvar[0] = ysigma**2 + yvar[0]
     
-    xhat = np.empty(nou)
+    xhat = np.zeros(nou)
     xcovar = np.diag( sigsqr / (2. * omgrid) )
     
-    for i in range(1,ny-1):#= 1, ny - 1:
+    for i in range(1,ny):#= 1, ny - 1:
     
         dt = time[i] - time[i-1]
         alpha = np.exp(-1. * omgrid * dt)
@@ -77,14 +75,7 @@ def kalman_params_supou( y, time, yvar, thetai, nou, counts): #, yhat, yhvar
 
 
 def lnlike(y, yhat, yhvar, counts=False):
-    #print(yhvar)
-    #print(yhat)
-    print(np.log10(((y - yhat)**2)) - np.log10(yhvar))
-    #exit()
     lnlike = -0.5 * np.log( 2. * np.pi * yhvar ) - 0.5 * (y - yhat)**2 / yhvar
-    print(lnlike)
-    if np.any(np.isinf(lnlike)):
-        exit()
     return np.sum(lnlike)
 
 def lnprior(thetai, omega_max, counts=False):
@@ -117,11 +108,11 @@ def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000,
 
     mu = np.mean(y) + np.std(y) / np.sqrt(ny)# * randomn(seed, nchains)
     ysig0 = (np.var(y) - np.median(yvar))
-    #ysig0[ysig0 < 0.] = 0.
+    if ysig0 < 0: ysig0 = 0.
     ysig0 = np.sqrt(ysig0)
-    print(ysig0)
-    #ysig0[ysig0 < 0.1 * np.std(y)] = 0.1 * np.std(y)
+    if ysig0 < 0.1 * np.std(y):  ysig0 = 0.1 * np.std(y)
     ysig = ysig0# * (ny - 1) / randomchi(seed, ny - 1, nchains) )
+    print(ysig)
 
     omega1 = np.log10(omega_max / omega_min)*0.5 + np.log10(omega_min) -1 #* randomu(seed, nchains) 
     omega1 = 10**omega1
@@ -138,7 +129,6 @@ def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000,
 
     theta = np.array([[np.log(omega1)], [np.log(omega2)], [mu], [ysig], [logit(slope / 2.)]]).T
 
-    print(1e-4*np.std(y))
     print(theta)
     
     if not silent:
@@ -150,10 +140,10 @@ def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000,
                    #method="SLSQP",
                    bounds=[(np.log(2.*omega_min),np.log(omega_max/2.)),
                            (np.log(2.*omega_min),np.log(omega_max/2.)),
-                           (-1e300, 1e300),
+                           (np.min(y), np.max(y)),
                            (1e-4*np.std(y), 1e300),
-                           (-2,2)],
-                   options={'disp':True}
+                           (-2,2)]#,
+                   #options={'disp':True}
                    )#, constraints=[{},{},{},{}]
 
     print(res.message)
