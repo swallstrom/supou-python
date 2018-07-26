@@ -77,8 +77,14 @@ def kalman_params_supou( y, time, yvar, thetai, nou, counts): #, yhat, yhvar
 
 
 def lnlike(y, yhat, yhvar, counts=False):
-    
+    #print(yhvar)
+    #print(yhat)
+    print(np.log10(((y - yhat)**2)) - np.log10(yhvar))
+    #exit()
     lnlike = -0.5 * np.log( 2. * np.pi * yhvar ) - 0.5 * (y - yhat)**2 / yhvar
+    print(lnlike)
+    if np.any(np.isinf(lnlike)):
+        exit()
     return np.sum(lnlike)
 
 def lnprior(thetai, omega_max, counts=False):
@@ -110,13 +116,16 @@ def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000,
     omega_max = 1. / min(dt / 10.)
 
     mu = np.mean(y) + np.std(y) / np.sqrt(ny)# * randomn(seed, nchains)
-    ysig0 = np.sqrt((np.var(y) - np.median(yvar)) > 0.)
-    ysig0 = ysig0 > 0.1 * np.std(y)
+    ysig0 = (np.var(y) - np.median(yvar))
+    #ysig0[ysig0 < 0.] = 0.
+    ysig0 = np.sqrt(ysig0)
+    print(ysig0)
+    #ysig0[ysig0 < 0.1 * np.std(y)] = 0.1 * np.std(y)
     ysig = ysig0# * (ny - 1) / randomchi(seed, ny - 1, nchains) )
 
-    omega1 = np.log10(omega_max / omega_min) + np.log10(omega_min) - 1 #* randomu(seed, nchains) 
+    omega1 = np.log10(omega_max / omega_min)*0.5 + np.log10(omega_min) -1 #* randomu(seed, nchains) 
     omega1 = 10**omega1
-    omega2 = np.log10(omega_max / omega_min) + np.log10(omega_min) # * randomu(seed, nchains)
+    omega2 = np.log10(omega_max / omega_min)*0.5 + np.log10(omega_min) # * randomu(seed, nchains)
     omega2 = 10.**omega2
 
     #if omega1 > omega2:
@@ -128,6 +137,9 @@ def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000,
     
 
     theta = np.array([[np.log(omega1)], [np.log(omega2)], [mu], [ysig], [logit(slope / 2.)]]).T
+
+    print(1e-4*np.std(y))
+    print(theta)
     
     if not silent:
         print('Getting MLE for initial guesses...')
@@ -135,16 +147,20 @@ def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000,
     res = minimize(minlnprob,
                    theta,
                    args = (y,time,yvar,nou,omega_max),
-                   method="SLSQP",
+                   #method="SLSQP",
                    bounds=[(np.log(2.*omega_min),np.log(omega_max/2.)),
                            (np.log(2.*omega_min),np.log(omega_max/2.)),
                            (-1e300, 1e300),
                            (1e-4*np.std(y), 1e300),
-                           (-2,2)]
+                           (-2,2)],
+                   options={'disp':True}
                    )#, constraints=[{},{},{},{}]
 
-    if res.success:
-        print(res.x)
+    print(res.message)
+    print(res.x)
+    print(res.success)
+    #if res.success:
+    #    print(res.x)
         
     return #post
 
