@@ -3,10 +3,6 @@ import numpy as np
 
 """ TO DO:
 Doublecheck the matrix multiplication!
-Check: diag_matrix - I think that's the same as np.diag (Yup!)
-logit/inv_logit - copied over from idl_functions.py (Jonty converted these)
-Note: these functions (kalman, logpost, loglik) are always called with a row of theta, not the full array! Maybe let's not call it theta, but thetai ?
-
 """
 def logit(x,inverse=False):
     
@@ -27,17 +23,17 @@ def logit(x,inverse=False):
         return, inv_logit
 
 
-def kalman_params_supou( y, time, yvar, theta, nou, counts): #, yhat, yhvar
+def kalman_params_supou( y, time, yvar, thetai, nou, counts): #, yhat, yhvar
 
     ny = len(y)
-    omega1 = np.exp(theta[0])
-    omega2 = np.exp(theta[1])
-    mu = theta[2]
-    ysigma = theta[3]
-    slope = 2. * logit(theta[4], inverse=True) #???
+    omega1 = np.exp(thetai[0])
+    omega2 = np.exp(thetai[1])
+    mu = thetai[2]
+    ysigma = thetai[3]
+    slope = 2. * logit(thetai[4], inverse=True) #???
     #;slope = 1d
     
-    omgrid = np.arange(nou) / (nou - 1.) * (theta[1] - theta[0]) + theta[0]
+    omgrid = np.arange(nou) / (nou - 1.) * (thetai[1] - thetai[0]) + thetai[0]
     omgrid = np.exp(omgrid)
     
     weights = omgrid**(1. - slope / 2.) / np.sqrt(np.sum(omgrid**(2. - slope)))
@@ -70,7 +66,7 @@ def kalman_params_supou( y, time, yvar, theta, nou, counts): #, yhat, yhvar
                        
         yhat[i] = mu + np.sum(weights * xhat)
                        
-        xcovar = np.matmul(alpha*alpha) * xcovar + np.diag(ouvar) - np.matmul(psi, psi) / yhvar[i-1]
+        xcovar = np.outer(alpha*alpha) * xcovar + np.diag(ouvar) - np.outer(psi, psi) / yhvar[i-1]
         if counts:
             yhvar[i] = np.matmul(weights,np.matmul(xcovar,weights)) + 1. / np.exp(yhat[i])
         else:
@@ -81,14 +77,14 @@ def kalman_params_supou( y, time, yvar, theta, nou, counts): #, yhat, yhvar
     return yhat, yhvar#, xcovar #What is this supposed to be returning??? 
 #end
 
-def lnlike(theta, y, yhat, yhvar):
+def lnlike(thetai, y, yhat, yhvar):
     
     lnlike = -0.5 * np.log( 2. * np.pi * yhvar ) - 0.5 * (y - yhat)^2 / yhvar
     return np.sum(lnlike)
 
-def lnprior(theta, omega_max):
-    return -1. * np.log(np.log(omega_max) - theta[0]) + np.log( logit(theta[4], inverse=True) * (1. - logit(theta[4], inverse=True)) )
+def lnprior(thetai, omega_max):
+    return -1. * np.log(np.log(omega_max) - thetai[0]) + np.log( logit(thetai[4], inverse=True) * (1. - logit(thetai[4], inverse=True)) )
 
-def lnprob(theta,y,time,yvar,nou,omega_max):
-    yhat,yhvar = kalman_params_supou(y, time, yvar, theta, nou, counts) #, yhat, yhvar
-    return lnprior(theta, omega_max) * lnlike(theta, y, yhat, yhvar)
+def lnprob(thetai,y,time,yvar,nou,omega_max):
+    yhat,yhvar = kalman_params_supou(y, time, yvar, thetai, nou, counts) #, yhat, yhvar
+    return lnprior(thetai, omega_max) * lnlike(thetai, y, yhat, yhvar)
