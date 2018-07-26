@@ -2,10 +2,31 @@
 import numpy as np
 
 """ TO DO:
-Check: diag_matrix - I think that's the same as np.diag
-logit/inv_logit
+Doublecheck the matrix multiplication!
+Check: diag_matrix - I think that's the same as np.diag (Yup!)
+logit/inv_logit - copied over from idl_functions.py (Jonty converted these)
+Note: these functions (kalman, logpost, loglik) are always called with a row of theta, not the full array! Maybe let's not call it theta, but thetai ?
 
 """
+def logit(x,inverse=False):
+    
+    if inverse == False:
+        xvals == x[(x < 0) or (x > 1)]
+        
+        if True in xvals:
+            print('All elements of x must be between 0 and 1')
+            return, 0
+    
+        logit = np.log(x / (1 - x))
+    
+        return, logit
+
+    else:
+        inv_logit = exp(x) / (1 + exp(x))
+        
+        return, inv_logit
+
+
 def kalman_params_supou( y, time, yvar, theta, nou, counts): #, yhat, yhvar
 
     ny = len(y)
@@ -13,10 +34,10 @@ def kalman_params_supou( y, time, yvar, theta, nou, counts): #, yhat, yhvar
     omega2 = np.exp(theta[1])
     mu = theta[2]
     ysigma = theta[3]
-    slope = 2. * inv_logit(theta[4]) #???
+    slope = 2. * logit(theta[4], inverse=True) #???
     #;slope = 1d
     
-    omgrid = np.linspace(nou) / (nou - 1.) * (theta[1] - theta[0]) + theta[0]
+    omgrid = np.arange(nou) / (nou - 1.) * (theta[1] - theta[0]) + theta[0]
     omgrid = np.exp(omgrid)
     
     weights = omgrid**(1. - slope / 2.) / np.sqrt(np.sum(omgrid**(2. - slope)))
@@ -47,7 +68,7 @@ def kalman_params_supou( y, time, yvar, theta, nou, counts): #, yhat, yhvar
                        
         xhat = alpha * xhat + psi / yhvar[i-1] * (y[i-1] - mu - np.sum(weights * xhat))
                        
-        yhat[i] = mu + total(weights * xhat)
+        yhat[i] = mu + np.sum(weights * xhat)
                        
         xcovar = np.matmul(alpha*alpha) * xcovar + np.diag(ouvar) - np.matmul(psi, psi) / yhvar[i-1]
         if counts:
@@ -66,7 +87,7 @@ def lnlike(theta, y, yhat, yhvar):
     return np.sum(lnlike)
 
 def lnprior(theta, omega_max):
-    return -1. * np.log(np.log(omega_max) - theta[0]) + np.log( inv_logit(theta[4]) * (1. - inv_logit(theta[4])) )
+    return -1. * np.log(np.log(omega_max) - theta[0]) + np.log( logit(theta[4], inverse=True) * (1. - logit(theta[4], inverse=True)) )
 
 def lnprob(theta,y,time,yvar,nou,omega_max):
     yhat,yhvar = kalman_params_supou(y, time, yvar, theta, nou, counts) #, yhat, yhvar
