@@ -48,7 +48,7 @@ def kalman_params_supou( y, time, yvar, thetai, nou, counts): #, yhat, yhvar
     if counts:
         yhvar[0] = ysigma**2 + 1. / np.exp(yhat[0])
     else:
-        yhvar[0] = ysigma^2 + yvar[0]
+        yhvar[0] = ysigma**2 + yvar[0]
     
     xhat = np.empty(nou)
     xcovar = np.diag( sigsqr / (2. * omgrid) )
@@ -77,7 +77,7 @@ def kalman_params_supou( y, time, yvar, thetai, nou, counts): #, yhat, yhvar
 
 def lnlike(y, yhat, yhvar):
     
-    lnlike = -0.5 * np.log( 2. * np.pi * yhvar ) - 0.5 * (y - yhat)^2 / yhvar
+    lnlike = -0.5 * np.log( 2. * np.pi * yhvar ) - 0.5 * (y - yhat)**2 / yhvar
     return np.sum(lnlike)
 
 def lnprior(thetai, omega_max):
