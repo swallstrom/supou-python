@@ -1,5 +1,6 @@
 
 import numpy as np
+from scipy.optimize import minimize
 
 """ TO DO:
 Doublecheck the matrix multiplication!
@@ -86,3 +87,50 @@ def lnprior(thetai, omega_max):
 def lnprob(thetai,y,time,yvar,nou,omega_max):
     yhat,yhvar = kalman_params_supou(y, time, yvar, thetai, nou, counts) #, yhat, yhvar
     return lnprior(thetai, omega_max) * lnlike(y, yhat, yhvar)
+
+def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000, 
+          burniter=10000, nwalkers=100, silent=False, rhat=rhat, counts=False, mle=False, 
+          that=that, yhat=yhat, yhvar=yhvar, **kwargs
+        ):
+
+    ny = len(y)
+    nt = len(time)
+    nyvar = len(yvar)
+
+    if (ny != nt) or (nt != nyvar) or (ny != nyvar):
+        print("time, y and yvar must all be the same size")
+        return
+
+    dt = time[1:] - time[0:-1]
+    omega_min = 1. / (10. * (time[-1] - time[0]))
+    omega_max = 1. / min(dt / 10.)
+
+    mu = np.mean(y) + np.std(y) / np.sqrt(ny)# * randomn(seed, nchains)
+    ysig0 = sqrt((np.var(y) - np.median(yvar)) > 0d)
+    ysig0 = ysig0 > 0.1 * np.std(y)
+    ysig = ysig0# * (ny - 1) / randomchi(seed, ny - 1, nchains) )
+
+    omega1 = np.log10(omega_max / omega_min) + np.log10(omega_min) - 1 #* randomu(seed, nchains) 
+    omega1 = 10**omega1
+    omega2 = np.log10(omega_max / omega_min) + alog10(omega_min) # * randomu(seed, nchains)
+    omega2 = 10.**omega2
+
+    #if omega1 > omega2:
+    #    a = np.copy(omega2)
+    #    omega2 = np.copy(omega1)
+    #    omega1 = np.copy(a)
+
+    slope = 0.9 + 0.2 #*np.random.random
+    
+
+    theta = np.array([[alog(omega1)], [alog(omega2)], [mu], [ysig], [logit(slope / 2d)]]).T
+    
+    if not silent:
+        print('Getting MLE for initial guesses...')
+
+    res = minimize(-1*lnprob, theta, args = (y,time,yvar,nou,omega_max), method="SLSQP", bounds=[(np.log(2d*omega_min),np.log(omega_max/2d)),(np.log(2d*omega_min),np.log(omega_max/2d)),(-1e300, 1e300),(1e-4*np.std(y),1e300),(-2,2)])#, constraints=[{},{},{},{}]
+
+    if res.success:
+        print(res.x)
+        
+    return post
