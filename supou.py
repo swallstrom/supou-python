@@ -30,7 +30,7 @@ def kalman_params_supou( y, time, yvar, thetai, nou, counts): #, yhat, yhvar
     omega2 = np.exp(thetai[1])
     mu = thetai[2]
     ysigma = thetai[3]
-    slope = 2. * logit(thetai[4], inverse=True) #???
+    slope = 2. * logit(thetai[4], inverse=True) 
     #;slope = 1d
     
     omgrid = np.arange(nou) / (nou - 1.) * (thetai[1] - thetai[0]) + thetai[0]
@@ -72,12 +72,10 @@ def kalman_params_supou( y, time, yvar, thetai, nou, counts): #, yhat, yhvar
         else:
             yhvar[i] = np.matmul(weights,np.matmul(xcovar,weights)) + yvar[i]
     
-        #endfor
-
     return yhat, yhvar#, xcovar #What is this supposed to be returning??? 
-#end
 
-def lnlike(thetai, y, yhat, yhvar):
+
+def lnlike(y, yhat, yhvar):
     
     lnlike = -0.5 * np.log( 2. * np.pi * yhvar ) - 0.5 * (y - yhat)^2 / yhvar
     return np.sum(lnlike)
@@ -87,4 +85,4 @@ def lnprior(thetai, omega_max):
 
 def lnprob(thetai,y,time,yvar,nou,omega_max):
     yhat,yhvar = kalman_params_supou(y, time, yvar, thetai, nou, counts) #, yhat, yhvar
-    return lnprior(thetai, omega_max) * lnlike(thetai, y, yhat, yhvar)
+    return lnprior(thetai, omega_max) * lnlike(y, yhat, yhvar)
