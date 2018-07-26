@@ -1,6 +1,9 @@
 
 import numpy as np
 from scipy.optimize import minimize
+import emcee
+import corner
+import matplotlib.pyplot as plt
 
 """ TO DO:
 Doublecheck the matrix multiplication!
@@ -78,18 +81,34 @@ def lnlike(y, yhat, yhvar, counts=False):
     lnlike = -0.5 * np.log( 2. * np.pi * yhvar ) - 0.5 * (y - yhat)**2 / yhvar
     return np.sum(lnlike)
 
-def lnprior(thetai, omega_max, counts=False):
-    return -1. * np.log(np.log(omega_max) - thetai[0]) + np.log( logit(thetai[4], inverse=True) * (1. - logit(thetai[4], inverse=True)) )
+def lnprior(thetai, omega_max,omega_min, counts=False):
+    if np.log(omega_min) < thetai[0] < np.log(omega_max) and np.log(omega_min) < thetai[1] < np.log(omega_max) and thetai[0] < thetai[1] and -100 < thetai[2] < 100: #should thetai[3] be forced to be positive?
+        return -1. * np.log(np.log(omega_max) - thetai[0]) + np.log( logit(thetai[4], inverse=True) * (1. - logit(thetai[4], inverse=True)) )
+    return -np.inf
 
-def lnprob(thetai,y,time,yvar,nou,omega_max, counts=False):
+def lnprob(thetai,y,time,yvar,nou,omega_max, omega_min, counts=False):
     yhat,yhvar = kalman_params_supou(y, time, yvar, thetai, nou, counts) #, yhat, yhvar
-    return lnprior(thetai, omega_max) * lnlike(y, yhat, yhvar)
+    #print(yhat,yhvar)
+    lp = lnprior(thetai, omega_max,omega_min)
+    if lp == -np.inf:
+        return lp
+    if np.isnan(lp):
+        print(thetai,yhat,yhvar,lp,np.log(np.log(omega_max) - thetai[0]),logit(thetai[4], inverse=True),(1. - logit(thetai[4], inverse=True)))
+        exit()
+    print(lp)
+    ll = lnlike(y, yhat, yhvar)
+    if np.isnan(ll):
+        print(thetai,yhat,yhvar,ll,(y - yhat)**2)
+        exit()
+    print(ll)
+    print(lp + ll)
+    return lp + ll
 
-def minlnprob(thetai,y,time,yvar,nou,omega_max, counts=False):
-    return -1*lnprob(thetai,y,time,yvar,nou,omega_max)
+def minlnprob(thetai,y,time,yvar,nou,omega_max,omega_min, counts=False):
+    return -1*lnprob(thetai,y,time,yvar,nou,omega_max,omega_min)
 
 def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000, 
-          burniter=10000, nwalkers=100, silent=False, counts=False, mle=False,
+          burniter=1000, nwalkers=100, silent=False, counts=False, mle=False,
           #rhat=rhat, that=that, yhat=yhat, yhvar=yhvar,
           **kwargs
         ):
@@ -136,7 +155,7 @@ def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000,
 
     res = minimize(minlnprob,
                    theta,
-                   args = (y,time,yvar,nou,omega_max),
+                   args = (y,time,yvar,nou,omega_max,omega_min),
                    #method="SLSQP",
                    bounds=[(np.log(2.*omega_min),np.log(omega_max/2.)),
                            (np.log(2.*omega_min),np.log(omega_max/2.)),
@@ -151,7 +170,44 @@ def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000,
     print(res.success)
     #if res.success:
     #    print(res.x)
-        
+
+    sampler=emcee.EnsembleSampler(nwalkers,5,lnprob,args=(y,time,yvar,nou,omega_max, omega_min))
+    pos = [res.x * 1e-3*np.random.randn(5) for i in range(nwalkers)]
+    pos, prob, state=sampler.run_mcmc(pos,burniter)
+    #pos = sampler.chain[:,-1,:]
+    sampler.reset()
+    sampler.run_mcmc(pos, 1000)
+
+    samples=sampler.chain.reshape((-1,5)) #ndim=5
+    omega1_mcmc, omega2_mcmc, mu_mcmc, ysig_mcmc, slope_mcmc = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
+                                                                   zip(*np.percentile(samples, [16, 50, 84],
+                                                                                      axis=0)))
+
+    print(omega1_mcmc, omega2_mcmc, mu_mcmc, ysig_mcmc, slope_mcmc)
+
+    fig, axes = plt.subplots(5, 1, sharex=True, figsize=(8, 9))
+    axes[0].plot(sampler.chain[:, :, 0].T, color="k", alpha=0.4)    
+    axes[1].plot(sampler.chain[:, :, 1].T, color="k", alpha=0.4)
+    axes[2].plot(sampler.chain[:, :, 2].T, color="k", alpha=0.4)
+    axes[3].plot(sampler.chain[:, :, 3].T, color="k", alpha=0.4)
+    axes[4].plot(sampler.chain[:, :, 4].T, color="k", alpha=0.4)
+#    axes[1].yaxis.set_major_locator(MaxNLocator(5))
+    #axes[1].axhline(b_true, color="#888888", lw=2)
+    #axes[1].set_ylabel("$b$")
+    
+    #axes[2].plot(np.exp(sampler.chain[:, :, 2]).T, color="k", alpha=0.4)
+    #axes[2].yaxis.set_major_locator(MaxNLocator(5))
+    #axes[2].axhline(f_true, color="#888888", lw=2)
+    #axes[2].set_ylabel("$f$")
+    #axes[2].set_xlabel("step number")
+
+    fig.tight_layout(h_pad=0.0)
+    #fig.savefig(prefix+"_line-time.png")
+    #plt.close(fig)
+    fig2=corner.corner(samples)#,labels=[r"$\alpha$","$c$"])
+    plt.show()
+    #fig.savefig(prefix+"_triangle.png")
+    #plt.close(fig)
     return #post
 
 
