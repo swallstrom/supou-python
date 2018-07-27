@@ -1,3 +1,9 @@
+## Basic Python gitignore file provided by github, some additions for code output
+
+# Code output
+*.png
+*.sup
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

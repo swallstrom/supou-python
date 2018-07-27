@@ -4,6 +4,7 @@ from scipy.optimize import minimize
 import emcee
 import corner
 import matplotlib.pyplot as plt
+import time
 
 """ TO DO:
 Doublecheck the matrix multiplication!
@@ -82,7 +83,7 @@ def lnlike(y, yhat, yhvar, counts=False):
     return np.sum(lnlike)
 
 def lnprior(thetai, omega_max,omega_min, counts=False):
-    if np.log(omega_min) < thetai[0] < np.log(omega_max) and np.log(omega_min) < thetai[1] < np.log(omega_max) and thetai[0] < thetai[1] and -100 < thetai[2] < 100: #should thetai[3] be forced to be positive?
+    if np.log(omega_min) < thetai[0] < np.log(omega_max) and np.log(omega_min) < thetai[1] < np.log(omega_max) and thetai[0] < thetai[1] and -100 < thetai[2] < 100 and thetai[3] > 0:
         return -1. * np.log(np.log(omega_max) - thetai[0]) + np.log( logit(thetai[4], inverse=True) * (1. - logit(thetai[4], inverse=True)) )
     return -np.inf
 
@@ -107,8 +108,8 @@ def lnprob(thetai,y,time,yvar,nou,omega_max, omega_min, counts=False):
 def minlnprob(thetai,y,time,yvar,nou,omega_max,omega_min, counts=False):
     return -1*lnprob(thetai,y,time,yvar,nou,omega_max,omega_min)
 
-def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000, 
-          burniter=1000, nwalkers=100, silent=False, counts=False, mle=False,
+def supou(y, time, yvar, name, nou=32, miniter=20000, maxiter=50000,
+          burniter=100, nwalkers=50, silent=False, counts=False, mle=False,
           #rhat=rhat, that=that, yhat=yhat, yhvar=yhvar,
           **kwargs
         ):
@@ -173,10 +174,12 @@ def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000,
 
     sampler=emcee.EnsembleSampler(nwalkers,5,lnprob,args=(y,time,yvar,nou,omega_max, omega_min))
     pos = [res.x * 1e-3*np.random.randn(5) for i in range(nwalkers)]
-    pos, prob, state=sampler.run_mcmc(pos,burniter)
+
+    ## Do a burn-in first, then reset and start the proper run from the burn-in position
+    pos_burn, prob_burn, state_burn = sampler.run_mcmc(pos,burniter)
     #pos = sampler.chain[:,-1,:]
     sampler.reset()
-    sampler.run_mcmc(pos, 1000)
+    sampler.run_mcmc(pos_burn, 1000)
 
     samples=sampler.chain.reshape((-1,5)) #ndim=5
     omega1_mcmc, omega2_mcmc, mu_mcmc, ysig_mcmc, slope_mcmc = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
@@ -185,6 +188,7 @@ def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000,
 
     print(omega1_mcmc, omega2_mcmc, mu_mcmc, ysig_mcmc, slope_mcmc)
 
+    ## Plot the walker paths
     fig, axes = plt.subplots(5, 1, sharex=True, figsize=(8, 9))
     axes[0].plot(sampler.chain[:, :, 0].T, color="k", alpha=0.4)    
     axes[1].plot(sampler.chain[:, :, 1].T, color="k", alpha=0.4)
@@ -202,14 +206,22 @@ def supou(y, time, yvar, nou=32, miniter=20000, maxiter=50000,
     #axes[2].set_xlabel("step number")
 
     fig.tight_layout(h_pad=0.0)
-    #fig.savefig(prefix+"_line-time.png")
+    fig.savefig(name+"_line-time.png")
     #plt.close(fig)
     fig2=corner.corner(samples)#,labels=[r"$\alpha$","$c$"])
     plt.show()
-    #fig.savefig(prefix+"_triangle.png")
+    fig.savefig(name+"_triangle.png")
     #plt.close(fig)
     return #post
 
+#Time the script
+startTime = time.time()
 
-time, y, yvar = np.loadtxt('example_lc.txt', delimiter=', ', unpack=True)
-supou(y, time, yvar)
+filename = '0238+166_allfluxes_supou.csv'
+
+time, y, yvar = np.loadtxt(filename, delimiter=', ', unpack=True)
+supou(y, time, yvar, filename.rstrip('_allfluxes_supou.csv'))
+
+
+print(" -----\n Script took {:.1f} seconds ({:.1f} minutes) \n -----".format(time.time()-startTime, (time.time()-startTime)/60.))
+
