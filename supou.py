@@ -184,7 +184,16 @@ def supou(y, time, yvar, name, nou=32, miniter=20000, maxiter=50000,
     samples=sampler.chain.reshape((-1,5)) #ndim=5
     omega1_mcmc, omega2_mcmc, mu_mcmc, ysig_mcmc, slope_mcmc = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
                                                                    zip(*np.percentile(samples, [16, 50, 84],
-                                                                                      axis=0)))
+                                                                                    axis=0)))
+
+
+    ### NOTE: want exp(omega1) and exp(omega2) to later take the log10 when plotting
+    with open(name+"-python.sup", 'w') as f:
+        f.write('#omega1,omega2,mu,ysig,slope\n')
+        for i,v in enumerate(samples):
+            f.write('{},{},{},{},{}\n'.format(np.exp(samples[i][0]), np.exp(samples[i][1]), samples[i][2], samples[i][3], samples[i][4],))
+    f.closed
+
 
     print(omega1_mcmc, omega2_mcmc, mu_mcmc, ysig_mcmc, slope_mcmc)
 
@@ -207,20 +216,20 @@ def supou(y, time, yvar, name, nou=32, miniter=20000, maxiter=50000,
 
     fig.tight_layout(h_pad=0.0)
     fig.savefig(name+"_line-time.png")
-    #plt.close(fig)
+    plt.clf()
     fig2=corner.corner(samples)#,labels=[r"$\alpha$","$c$"])
-    plt.show()
-    fig.savefig(name+"_triangle.png")
-    #plt.close(fig)
+    #plt.show()
+    fig2.savefig(name+"_triangle.png")
     return #post
 
 #Time the script
 startTime = time.time()
 
 filename = '0238+166_allfluxes_supou.csv'
+#filename = 'example_lc.txt'
 
-time, y, yvar = np.loadtxt(filename, delimiter=', ', unpack=True)
-supou(y, time, yvar, filename.rstrip('_allfluxes_supou.csv'))
+day, y, yvar = np.loadtxt(filename, delimiter=', ', unpack=True)
+supou(y, day, yvar, filename.split('_')[0])
 
 
 print(" -----\n Script took {:.1f} seconds ({:.1f} minutes) \n -----".format(time.time()-startTime, (time.time()-startTime)/60.))
