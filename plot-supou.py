@@ -82,9 +82,9 @@ def plot_distr(filename, p0_init, col, fit=False, **kwargs):
     return
 
 
-p0 = [0.0, 1.0, -5.0, 0.5]
+p0 = [0.0, 1.0, -2.5, 0.5]
 
-#filename = '0238+166_allfluxes_supou.sup' ##NB the IDL outputs are omega, not log10(omega) !
+#filename = '0238+166_allfluxes_supou.sup'
 #filename = 'example_lc.sup'
 #cols = [2,3]
 
