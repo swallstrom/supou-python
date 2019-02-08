@@ -225,11 +225,14 @@ def supou(y, time, yvar, name, nou=32, miniter=20000, maxiter=50000,
 #Time the script
 startTime = time.time()
 
-filename = '0238+166_allfluxes_supou.csv'
+#filename = '0238+166_allfluxes_supou.csv'
 #filename = 'example_lc.txt'
 
-day, y, yvar = np.loadtxt(filename, delimiter=', ', unpack=True)
-supou(y, day, yvar, filename.split('_')[0])
+filenamelist = glob.glob('*_allfluxes_supou.csv')
+
+for filename in filename_list:
+    day, y, yvar = np.loadtxt(filename, delimiter=', ', unpack=True)
+    supou(y, day, yvar, filename.split('_')[0])
 
 
 print(" -----\n Script took {:.1f} seconds ({:.1f} minutes) \n -----".format(time.time()-startTime, (time.time()-startTime)/60.))
