@@ -5,6 +5,7 @@ import emcee
 import corner
 import matplotlib.pyplot as plt
 import time
+import glob
 
 """ TO DO:
 Doublecheck the matrix multiplication!
@@ -108,7 +109,7 @@ def lnprob(thetai,y,time,yvar,nou,omega_max, omega_min, counts=False):
 def minlnprob(thetai,y,time,yvar,nou,omega_max,omega_min, counts=False):
     return -1*lnprob(thetai,y,time,yvar,nou,omega_max,omega_min)
 
-def supou(y, time, yvar, name, nou=32, miniter=20000, maxiter=50000,
+def supou(y, time, yvar, name, rootdir, nou=32, miniter=20000, maxiter=50000,
           burniter=100, nwalkers=50, silent=False, counts=False, mle=False,
           #rhat=rhat, that=that, yhat=yhat, yhvar=yhvar,
           **kwargs
@@ -188,7 +189,7 @@ def supou(y, time, yvar, name, nou=32, miniter=20000, maxiter=50000,
 
 
     ### NOTE: want exp(omega1) and exp(omega2) to later take the log10 when plotting
-    with open(name+"-python.sup", 'w') as f:
+    with open("{}-python.sup".format(name), 'w') as f:
         f.write('#omega1,omega2,mu,ysig,slope\n')
         for i,v in enumerate(samples):
             f.write('{},{},{},{},{}\n'.format(np.exp(samples[i][0]), np.exp(samples[i][1]), samples[i][2], samples[i][3], samples[i][4],))
@@ -215,12 +216,12 @@ def supou(y, time, yvar, name, nou=32, miniter=20000, maxiter=50000,
     #axes[2].set_xlabel("step number")
 
     fig.tight_layout(h_pad=0.0)
-    fig.savefig(name+"_line-time.png")
+    fig.savefig("{}_line-time.png".format(name))
     plt.clf()
     fig2=corner.corner(samples)#,labels=[r"$\alpha$","$c$"])
     #plt.show()
-    fig2.savefig(name+"_triangle.png")
-    return #post
+    fig2.savefig("{}_triangle.png".format(name))
+    return 
 
 #Time the script
 startTime = time.time()
@@ -228,11 +229,14 @@ startTime = time.time()
 #filename = '0238+166_allfluxes_supou.csv'
 #filename = 'example_lc.txt'
 
-filenamelist = glob.glob('*_allfluxes_supou.csv')
 
-for filename in filename_list:
+rootdir = '/Users/sofiaw/data/JCMT/SCUBA2/QuasarVariability/results'
+
+filenamelist = glob.glob('{}/*_allfluxes_supou.csv'.format(rootdir))
+
+for filename in filenamelist:
     day, y, yvar = np.loadtxt(filename, delimiter=', ', unpack=True)
-    supou(y, day, yvar, filename.split('_')[0])
+    supou(y, day, yvar, filename.split('/')[-1].split('_')[0])
 
 
 print(" -----\n Script took {:.1f} seconds ({:.1f} minutes) \n -----".format(time.time()-startTime, (time.time()-startTime)/60.))
