@@ -205,20 +205,17 @@ def supou(y, time, yvar, name, rootdir, nou=32, miniter=20000, maxiter=50000,
     axes[2].plot(sampler.chain[:, :, 2].T, color="k", alpha=0.4)
     axes[3].plot(sampler.chain[:, :, 3].T, color="k", alpha=0.4)
     axes[4].plot(sampler.chain[:, :, 4].T, color="k", alpha=0.4)
-#    axes[1].yaxis.set_major_locator(MaxNLocator(5))
-    #axes[1].axhline(b_true, color="#888888", lw=2)
-    #axes[1].set_ylabel("$b$")
-    
-    #axes[2].plot(np.exp(sampler.chain[:, :, 2]).T, color="k", alpha=0.4)
-    #axes[2].yaxis.set_major_locator(MaxNLocator(5))
-    #axes[2].axhline(f_true, color="#888888", lw=2)
-    #axes[2].set_ylabel("$f$")
-    #axes[2].set_xlabel("step number")
+
+    axes[0].set_ylabel(r"$\Omega 1$")
+    axes[1].set_ylabel(r"$\Omega 2$")
+    axes[2].set_ylabel(r"$\mu$")
+    axes[3].set_ylabel(r"$\sigma_y$")
+    axes[4].set_ylabel(r"$slope$")
 
     fig.tight_layout(h_pad=0.0)
     fig.savefig("{}_line-time.png".format(name))
     plt.clf()
-    fig2=corner.corner(samples)#,labels=[r"$\alpha$","$c$"])
+    fig2=corner.corner(samples,labels=[r"$\log \Omega_1$", r"$\log \Omega_2$", r"$\mu$", r"$\sigma_y$", r"$\mathrm{slope}$"])
     #plt.show()
     fig2.savefig("{}_triangle.png".format(name))
     return 
@@ -236,7 +233,7 @@ filenamelist = glob.glob('{}/*_allfluxes_supou.csv'.format(rootdir))
 
 for filename in filenamelist:
     day, y, yvar = np.loadtxt(filename, delimiter=', ', unpack=True)
-    supou(y, day, yvar, filename.split('/')[-1].split('_')[0])
+    supou(y, day, yvar, filename.split('/')[-1].split('_')[0], rootdir)
 
 
 print(" -----\n Script took {:.1f} seconds ({:.1f} minutes) \n -----".format(time.time()-startTime, (time.time()-startTime)/60.))
