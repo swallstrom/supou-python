@@ -213,11 +213,11 @@ def supou(y, time, yvar, name, rootdir, nou=32, miniter=20000, maxiter=50000,
     axes[4].set_ylabel(r"$slope$")
 
     fig.tight_layout(h_pad=0.0)
-    fig.savefig("{}_line-time.png".format(name))
+    fig.savefig("{}_line-time.pdf".format(name))
     plt.clf()
     fig2=corner.corner(samples,labels=[r"$\log \Omega_1$", r"$\log \Omega_2$", r"$\mu$", r"$\sigma_y$", r"$\mathrm{slope}$"])
     #plt.show()
-    fig2.savefig("{}_triangle.png".format(name))
+    fig2.savefig("{}_triangle.pdf".format(name))
     return 
 
 #Time the script

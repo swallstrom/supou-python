@@ -12,7 +12,7 @@ def plot_distr(filename, p0_init, col, fit=False, **kwargs):
     print("File in: "+filename)
     data = np.loadtxt(filename, delimiter=',', usecols=col)
     sourcename = filename.split('.')[0]
-    savename = sourcename + '_supou.png'
+    savename = sourcename + '_supou.pdf'
 	
     lowhis, lowbins_edge = np.histogram(np.log10(data[:,0]), bins=100, density=True)
     highhis, highbins_edge = np.histogram(np.log10(data[:,1]), bins=100, density=True)
