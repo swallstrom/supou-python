@@ -7,9 +7,10 @@ import matplotlib.pyplot as plt
 import time
 import glob
 
-""" TO DO:
-Doublecheck the matrix multiplication!
+""" 
+*** Remember to change rootdir and filenamelist at end of script! ***
 """
+
 def logit(x,inverse=False):
     
     if inverse == False:
