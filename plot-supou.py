@@ -84,9 +84,6 @@ def plot_distr(filename, p0_init, col, fit=False, **kwargs):
 
 p0 = [0.0, 1.0, -2.5, 0.5]
 
-#filename = '0238+166_allfluxes_supou.sup'
-#filename = 'example_lc.sup'
-#cols = [2,3]
 
 filename = '0238+166-python.sup'
 cols = [0,1]

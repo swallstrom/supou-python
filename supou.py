@@ -190,7 +190,7 @@ def supou(y, time, yvar, name, rootdir, nou=32, miniter=20000, maxiter=50000,
 
 
     ### NOTE: want exp(omega1) and exp(omega2) to later take the log10 when plotting
-    with open("{}-python.sup".format(name), 'w') as f:
+    with open("{}/{}-python.sup".format(rootdir, name), 'w') as f:
         f.write('#omega1,omega2,mu,ysig,slope\n')
         for i,v in enumerate(samples):
             f.write('{},{},{},{},{}\n'.format(np.exp(samples[i][0]), np.exp(samples[i][1]), samples[i][2], samples[i][3], samples[i][4],))
@@ -214,23 +214,20 @@ def supou(y, time, yvar, name, rootdir, nou=32, miniter=20000, maxiter=50000,
     axes[4].set_ylabel(r"$slope$")
 
     fig.tight_layout(h_pad=0.0)
-    fig.savefig("{}_line-time.pdf".format(name))
+    fig.savefig("{}/{}_line-time.pdf".format(rootdir, name))
     plt.clf()
     fig2=corner.corner(samples,labels=[r"$\log \Omega_1$", r"$\log \Omega_2$", r"$\mu$", r"$\sigma_y$", r"$\mathrm{slope}$"])
     #plt.show()
-    fig2.savefig("{}_triangle.pdf".format(name))
+    fig2.savefig("{}/{}_triangle.pdf".format(rootdir, name))
     return 
 
 #Time the script
 startTime = time.time()
 
-#filename = '0238+166_allfluxes_supou.csv'
-#filename = 'example_lc.txt'
+rootdir = '/Users/sofiaw/data/JCMT/SCUBA2/QuasarVariability/test'
 
-
-rootdir = '/Users/sofiaw/data/JCMT/SCUBA2/QuasarVariability/results'
-
-filenamelist = glob.glob('{}/*_allfluxes_supou.csv'.format(rootdir))
+#filenamelist = glob.glob('{}/*_allfluxes_supou.csv'.format(rootdir))
+filenamelist = glob.glob('{}/0238+166_allfluxes_supou.csv'.format(rootdir))
 
 for filename in filenamelist:
     day, y, yvar = np.loadtxt(filename, delimiter=', ', unpack=True)
