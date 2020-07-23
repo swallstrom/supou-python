@@ -1,3 +1,13 @@
+'''
+A python version of Brandon Kellys' IDL script supou.pro, as described in Kelly et al. 2011
+
+FIT A SUPERPOSITION OF ORNSTEIN-UHLENBECK (sup-OU) PROCESSES TO A
+TIME SERIES SAMPLED AT IRREGULARY INTERVALS WITH MEASUREMENT
+ERROR. BAYESIAN INFERENCE IS PERFORMED. THE OU PROCESSES ARE ASSUMED
+TO HAVE THE SAME MEAN AND WHITE NOISE AMPLITUDE (SIGMA), BUT
+DIFFERENT VALUE OF THE ANGULAR BREAK FREQUENCY, WHICH FALL ON A
+REGULAR GRID FROM OMEGA_1 TO OMEGA_2.
+'''
 
 import numpy as np
 from scipy.optimize import minimize
@@ -12,7 +22,9 @@ import glob
 """
 
 def logit(x,inverse=False):
-    
+    '''
+    Compute the logit or inverse logit function of x. X must be between 0 and 1.
+    '''
     if inverse == False:
         if np.any(x < 0.) or np.any(x > 1.):
             print('All elements of x must be between 0 and 1')
@@ -28,23 +40,30 @@ def logit(x,inverse=False):
         return inv_logit
 
 
-def kalman_params_supou( y, time, yvar, thetai, nou, counts): #, yhat, yhvar
-
+def kalman_params_supou(y, time, yvar, thetai, nou, counts):
+    '''
+    Compute the mean and variance of the joint likelihood function for (y - mu) using the Kalman recursions
+    
+    Inputs:
+    y - timeseries fluxes
+    time - timeseries days since first observation
+    yvar - timeseries flux error
+    thetai - starting parameters [omega1, omega2, mu, ysigma, slope]. Omega are the break frequencies of the sup-OU process. Mu is the mean level of the timeseries, ysigma the variance. Slope is the slope between omega1 and omega2 (between -2 and 0)
+    nou - number of OU processes in the sum used to model y
+    counts - boolean
+    '''
     ny = len(y)
     omega1 = np.exp(thetai[0])
     omega2 = np.exp(thetai[1])
     mu = thetai[2]
     ysigma = thetai[3]
     slope = 2. * logit(thetai[4], inverse=True) 
-    #;slope = 1d
     
     omgrid = np.arange(nou) / (nou - 1.) * (thetai[1] - thetai[0]) + thetai[0]
     omgrid = np.exp(omgrid)
     
     weights = omgrid**(1. - slope / 2.) / np.sqrt(np.sum(omgrid**(2. - slope)))
-    
-    #;omgrid = dindgen(nou) / (nou - 1d) * (omega2 - omega1) + omega1
-    
+        
     sigsqr = 2. * ysigma**2 / np.sum(weights**2 / omgrid)
     
     yhat = np.zeros(ny)
@@ -58,7 +77,7 @@ def kalman_params_supou( y, time, yvar, thetai, nou, counts): #, yhat, yhvar
     xhat = np.zeros(nou)
     xcovar = np.diag( sigsqr / (2. * omgrid) )
     
-    for i in range(1,ny):#= 1, ny - 1:
+    for i in range(1,ny):
     
         dt = time[i] - time[i-1]
         alpha = np.exp(-1. * omgrid * dt)
@@ -77,20 +96,29 @@ def kalman_params_supou( y, time, yvar, thetai, nou, counts): #, yhat, yhvar
         else:
             yhvar[i] = np.matmul(weights,np.matmul(xcovar,weights)) + yvar[i]
     
-    return yhat, yhvar#, xcovar #What is this supposed to be returning??? 
+    return yhat, yhvar
 
 
 def lnlike(y, yhat, yhvar, counts=False):
+    '''Compute log-likelihood of the data'''
     lnlike = -0.5 * np.log( 2. * np.pi * yhvar ) - 0.5 * (y - yhat)**2 / yhvar
     return np.sum(lnlike)
 
 def lnprior(thetai, omega_max,omega_min, counts=False):
+    '''
+    Compute logarithm of the prior
+    
+    omega1 and omega2 must be between omega_min and omega_max
+    mu must be between -100 and 100
+    ysigma must be > 0
+    '''
     if np.log(omega_min) < thetai[0] < np.log(omega_max) and np.log(omega_min) < thetai[1] < np.log(omega_max) and thetai[0] < thetai[1] and -100 < thetai[2] < 100 and thetai[3] > 0:
         return -1. * np.log(np.log(omega_max) - thetai[0]) + np.log( logit(thetai[4], inverse=True) * (1. - logit(thetai[4], inverse=True)) )
     return -np.inf
 
 def lnprob(thetai,y,time,yvar,nou,omega_max, omega_min, counts=False):
-    yhat,yhvar = kalman_params_supou(y, time, yvar, thetai, nou, counts) #, yhat, yhvar
+    '''Compute logarithm of the posterior'''
+    yhat,yhvar = kalman_params_supou(y, time, yvar, thetai, nou, counts) 
     #print(yhat,yhvar)
     lp = lnprior(thetai, omega_max,omega_min)
     if lp == -np.inf:
@@ -112,7 +140,6 @@ def minlnprob(thetai,y,time,yvar,nou,omega_max,omega_min, counts=False):
 
 def supou(y, time, yvar, name, rootdir, nou=32, miniter=20000, maxiter=50000,
           burniter=100, nwalkers=50, silent=False, counts=False, mle=False,
-          #rhat=rhat, that=that, yhat=yhat, yhvar=yhvar,
           **kwargs
         ):
 
@@ -128,27 +155,23 @@ def supou(y, time, yvar, name, rootdir, nou=32, miniter=20000, maxiter=50000,
     omega_min = 1. / (10. * (time[-1] - time[0]))
     omega_max = 1. / min(dt / 10.)
 
-    mu = np.mean(y) + np.std(y) / np.sqrt(ny)# * randomn(seed, nchains)
+    ## First get initial guess values
+    mu = np.mean(y) + np.std(y) / np.sqrt(ny)
     ysig0 = (np.var(y) - np.median(yvar))
     if ysig0 < 0: ysig0 = 0.
     ysig0 = np.sqrt(ysig0)
     if ysig0 < 0.1 * np.std(y):  ysig0 = 0.1 * np.std(y)
-    ysig = ysig0# * (ny - 1) / randomchi(seed, ny - 1, nchains) )
+    ysig = ysig0
     print(ysig)
 
-    omega1 = np.log10(omega_max / omega_min)*0.5 + np.log10(omega_min) -1 #* randomu(seed, nchains) 
+    omega1 = np.log10(omega_max / omega_min)*0.5 + np.log10(omega_min) -1 
     omega1 = 10**omega1
-    omega2 = np.log10(omega_max / omega_min)*0.5 + np.log10(omega_min) # * randomu(seed, nchains)
+    omega2 = np.log10(omega_max / omega_min)*0.5 + np.log10(omega_min)
     omega2 = 10.**omega2
 
-    #if omega1 > omega2:
-    #    a = np.copy(omega2)
-    #    omega2 = np.copy(omega1)
-    #    omega1 = np.copy(a)
-
-    slope = 0.9 + 0.2 #*np.random.random
+    slope = 0.9
     
-
+    ## Get maximum-likelihood estimate for initial guess
     theta = np.array([[np.log(omega1)], [np.log(omega2)], [mu], [ysig], [logit(slope / 2.)]]).T
 
     print(theta)
@@ -159,34 +182,27 @@ def supou(y, time, yvar, name, rootdir, nou=32, miniter=20000, maxiter=50000,
     res = minimize(minlnprob,
                    theta,
                    args = (y,time,yvar,nou,omega_max,omega_min),
-                   #method="SLSQP",
                    bounds=[(np.log(2.*omega_min),np.log(omega_max/2.)),
                            (np.log(2.*omega_min),np.log(omega_max/2.)),
                            (np.min(y), np.max(y)),
                            (1e-4*np.std(y), 1e300),
-                           (-2,2)]#,
-                   #options={'disp':True}
-                   )#, constraints=[{},{},{},{}]
+                           (-2,2)]
+                   )
 
     print(res.message)
     print(res.x)
     print(res.success)
-    #if res.success:
-    #    print(res.x)
 
-    sampler=emcee.EnsembleSampler(nwalkers,5,lnprob,args=(y,time,yvar,nou,omega_max, omega_min))
+    sampler=emcee.EnsembleSampler(nwalkers,5,lnprob,args=(y,time,yvar,nou,omega_max,omega_min))
     pos = [res.x * 1e-3*np.random.randn(5) for i in range(nwalkers)]
 
     ## Do a burn-in first, then reset and start the proper run from the burn-in position
     pos_burn, prob_burn, state_burn = sampler.run_mcmc(pos,burniter)
-    #pos = sampler.chain[:,-1,:]
     sampler.reset()
     sampler.run_mcmc(pos_burn, 1000)
 
-    samples=sampler.chain.reshape((-1,5)) #ndim=5
-    omega1_mcmc, omega2_mcmc, mu_mcmc, ysig_mcmc, slope_mcmc = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]),
-                                                                   zip(*np.percentile(samples, [16, 50, 84],
-                                                                                    axis=0)))
+    samples=sampler.chain.reshape((-1,5)) 
+    omega1_mcmc, omega2_mcmc, mu_mcmc, ysig_mcmc, slope_mcmc = map(lambda v: (v[1], v[2]-v[1], v[1]-v[0]), zip(*np.percentile(samples, [16, 50, 84], axis=0)))
 
 
     ### NOTE: want exp(omega1) and exp(omega2) to later take the log10 when plotting
@@ -221,18 +237,22 @@ def supou(y, time, yvar, name, rootdir, nou=32, miniter=20000, maxiter=50000,
     fig2.savefig("{}/{}_triangle.pdf".format(rootdir, name))
     return 
 
-#Time the script
-startTime = time.time()
-
-rootdir = '/Users/sofiaw/data/JCMT/SCUBA2/QuasarVariability/test'
-
-#filenamelist = glob.glob('{}/*_allfluxes_supou.csv'.format(rootdir))
-filenamelist = glob.glob('{}/0238+166_allfluxes_supou.csv'.format(rootdir))
-
-for filename in filenamelist:
-    day, y, yvar = np.loadtxt(filename, delimiter=', ', unpack=True)
-    supou(y, day, yvar, filename.split('/')[-1].split('_')[0], rootdir)
 
 
-print(" -----\n Script took {:.1f} seconds ({:.1f} minutes) \n -----".format(time.time()-startTime, (time.time()-startTime)/60.))
+if __name__ == "__main__":
+    #Time the script
+    startTime = time.time()
+
+    # Directory of input data and output results
+    rootdir = '/Users/sofiaw/data/JCMT/SCUBA2/QuasarVariability/results'
+
+    # Input files = light curves of the form: days since first obs, flux, flux uncertainty
+    filenamelist = glob.glob('{}/*_allfluxes_supou.csv'.format(rootdir))
+
+    for filename in filenamelist:
+        day, y, yvar = np.loadtxt(filename, delimiter=', ', unpack=True)
+        supou(y, day, yvar, filename.split('/')[-1].split('_')[0], rootdir)
+
+
+    print(" -----\n Script took {:.1f} seconds ({:.1f} minutes) \n -----".format(time.time()-startTime, (time.time()-startTime)/60.))
 
