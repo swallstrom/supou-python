@@ -1,3 +1,5 @@
+DOI: https://doi.org/10.5281/zenodo.3967160
+
 Converting Brandon Kelly's IDL code supou.pro (described in general terms in Kelly+11) into Python
 
 Input file: lightcurve, of format [day, flux, flux err]
